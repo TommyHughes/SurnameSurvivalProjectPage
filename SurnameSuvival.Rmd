@@ -1,0 +1,72 @@
+---
+Title: "Francis Galton's Surname Survival Problem"
+Author: "Thomas Hughes"
+Date: 04/21/2019
+output: 
+  html_document: default
+
+---
+# Francis Galton's Surname Survival Problem
+
+## The Initial Question
+
+In 1873 [Francis Galton](https://en.wikipedia.org/wiki/Francis_Galton), a scientific polymath, wrote in *The Educational Times* asking whether or not one could find a general method for determining the probability that a patrilineal surname would go extinct. Reverand and mathematician Henry William Watson responded in the next issue with a solution. The two then published a paper in the [Journal of the Royal Anthropological Institue](https://en.wikipedia.org/wiki/Journal_of_the_Royal_Anthropological_Institute) entitled "On the Probability of the Extinction of Families". 
+
+The technique they used developed into what is now known as the [Galton-Watson Process](https://en.wikipedia.org/wiki/Galton–Watson_process) and, as it turns out, it isn't very good at determining the probability of surname survival. However, it has found useful applications in physics, genetics, and epidemiology. It also makes for a nice exercise in applied analysis and probability, which is how we will approach the problem here.
+
+The initial problem translates roughly as follows: 
+
+> "Assume the law of population is such that, in each generation, the probability that the adult males have no male children who reach adult life is $p_0$; the probability is $p_1$ for having one such male child; $p_2$ for two such males; and so on... Find the probability that the surname will become extinct after r generations."
+
+## The Solution
+To keep our model simple, we'll assume that the survival of each child is independent and that our surname begins with a single progenitor. Let's let $d_r$ denote the probability of extinction after $r$ generations, which is what Galton wants us to find. Let's start making a few important observations.
+
+First, we see that $d_1 = p_0$ and that if $p_0 = 0$, then our surname will not become extinct. To keep things interesting, we'll assume $0 < p_0 < 1$. Next, we see that $d_{r} \leq d_{r+1}$ since, if extinction occurs after $r$ generations, the surname remains extinct after $r+1$ generations. Furthermore, since $d_{r}$ represents a discrete probability, we know the monotonically increasing sequence $(d_r)$ is bounded above by 1, and therefore
+
+$$\lim_{r \rightarrow \infty} d_r = d \leq 1$$
+
+So here's the trick: we'll consider all possible mutually exclusive cases for how extinction can occur after $r+1$ generations and, using the value for $d_r$, find a recursive formula for $d_{r+1}$. First, we consider the case when our progenitor had no male children who reached adult life. We already know that the probability that this occurs is $p_0$. Next we consider the case when progenitor has exactly one male child who reaches adult life, and then that child's line goes extinct after $r$ generations. By independence, the probability that this occurs is $p_1d_r$. Continuing in this fashion, we obtain the recursive formula:
+
+$$d_{r+1} = p_0 + p_1d_r + p_2d_r^2 + p_3d_r^3 + \ldots$$
+
+which can be generalized to the power series
+
+$$G(x) = p_0 + p_1x + p_2x^2 + p_3x^3 + \ldots$$
+
+which means that $G(d_r) = d_{r+1}$ and $G(1)=1$. Testing for convergence shows that $G$ is smooth on $[0,1]$, implying
+
+$$d = \lim_{r \rightarrow \infty} d_{r+1} = \lim_{r \rightarrow \infty} G(d_r) = G(d)$$
+
+so that $d$ is a fixed point of $G$. Furthermore, since $G'(x), G''(x) \geq 0$ on $[0,1]$, it follows that $G$ is increasing and convex. Thus, the question reduces to whether or not $d<1$ or $d=1$. In the former case, we get that the surname will survive in perpetuity with probability $1-d$, in the latter, that the surname will eventually go extinct.
+
+So how will we know if $d<1$ or if $d=1$? It turns out that $d<1$ when the expected value of number of number of kids in the second generation is greater than or equal to 1. Otherwise, $d=1$ and the surname is doomed. To explain: since we know that $G$ is increasing and convex, and that $G(1)=1$, we wind up with only two cases depicted in the graph below.
+
+<center>
+```{r, Figure1, echo=F, eval=T, message=F, warning=F}
+library(ggplot2)
+x <- seq(0, 1, 0.01)
+f1 <- function(x){0.13+(0.4*x)+(0.32*x^2)+(0.1*x^3)+(0.01*x^4)+(0.04*x^5)}
+f2 <- function(x){0.6+(0.3*x)+(0.1*x^2)}
+f3 <- function(x){x}
+
+y1 <- sapply(x, f1)
+y2 <- sapply(x, f2)
+y3 <- sapply(x, f3)
+
+df <- data.frame(x, y1, y2, y3)
+
+pl <- ggplot(df, aes(x = x)) +
+  geom_line(aes(y = y1, colour = "G1")) +
+  geom_line(aes(y = y2, colour = "G2")) +
+  geom_line(aes(y = y3, colour = "y=x")) +
+  scale_x_continuous(name = "", breaks = c(0,1)) +
+  scale_y_continuous(name = "", breaks = c(1,1)) +
+  scale_colour_manual("",
+                      breaks = c("G1", "G2", "y=x"),
+                      values = c("red", "blue", "black")) +
+  labs(caption = "The red graph, G1, represents the case when d<1 and the blue graph, G2, 
+       represents the case when d=1") +
+  theme_minimal()
+plot(pl)
+```
+</center>
